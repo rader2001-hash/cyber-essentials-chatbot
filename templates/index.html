@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Essentials Readiness Chatbot</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #00d4ff; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00b8d9; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container { width: 100%; max-width: 800px; display: flex; flex-direction: column; }
+
+        .header { text-align: center; margin-bottom: 20px; position: relative; }
+        .header h1 { font-size: 22px; color: #00d4ff; letter-spacing: 1px; }
+        .header p { font-size: 13px; color: #aaaaaa; margin-top: 5px; }
+
+        .history-btn {
+            position: absolute;
+            top: 0; right: 0;
+            background-color: #0f3460;
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .history-btn:hover { background-color: #00d4ff; color: #1a1a2e; }
+
+        .history-drawer {
+            position: fixed;
+            top: 0; right: -420px;
+            width: 400px;
+            height: 100vh;
+            background-color: #16213e;
+            border-left: 1px solid #0f3460;
+            padding: 20px;
+            overflow-y: auto;
+            transition: right 0.3s ease;
+            z-index: 1000;
+        }
+
+        .history-drawer.open { right: 0; }
+
+        .history-drawer h2 {
+            color: #00d4ff;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-drawer h2 button { background: none; border: none; color: #aaaaaa; font-size: 18px; cursor: pointer; }
+
+        .history-section-label {
+            font-size: 11px;
+            color: #aaaaaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            margin-top: 12px;
+        }
+
+        .history-empty { color: #aaaaaa; font-size: 13px; text-align: center; margin-top: 40px; }
+
+        .history-entry {
+            background-color: #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .history-entry.favourited { border-left: 3px solid #ffaa00; }
+
+        .history-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-date { font-size: 11px; color: #aaaaaa; }
+        .history-score { font-size: 20px; font-weight: bold; color: #00d4ff; }
+        .history-verdict { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
+        .history-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+        .history-expand-btn {
+            flex: 1;
+            padding: 6px;
+            background-color: #1a1a2e;
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .history-fav-btn {
+            padding: 6px 10px;
+            background-color: #1a1a2e;
+            border: 1px solid #ffaa00;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .history-fav-btn.active { background-color: #ffaa00; }
+
+        .history-delete-btn {
+            padding: 6px 10px;
+            background-color: #1a1a2e;
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .history-details { display: none; margin-top: 10px; border-top: 1px solid #1a1a2e; padding-top: 10px; }
+        .history-area { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #dddddd; }
+        .history-breakdown { font-size: 11px; color: #aaaaaa; margin-top: 8px; line-height: 1.6; white-space: pre-wrap; }
+
+        .chat-window {
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid #0f3460;
+            height: 500px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background-color: #0f3460;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .section-header .section-title { font-size: 13px; font-weight: bold; color: #00d4ff; margin-bottom: 4px; }
+        .section-header .section-description { font-size: 12px; color: #aaaaaa; line-height: 1.5; }
+
+        .tip-bubble {
+            background-color: #1a2a1a;
+            border: 1px solid #ffaa00;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #ffaa00;
+            margin-bottom: 10px;
+        }
+
+        .transition-bubble {
+            text-align: center;
+            font-size: 12px;
+            color: #aaaaaa;
+            padding: 6px 0;
+            margin-bottom: 6px;
+            font-style: italic;
+        }
+
+        .message { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .message.bot { align-items: flex-start; }
+        .message.user { align-items: flex-end; }
+
+        .message .bubble {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .message.bot .bubble { background-color: #0f3460; color: #ffffff; border-bottom-left-radius: 2px; }
+        .message.user .bubble { background-color: #00d4ff; color: #1a1a2e; border-bottom-right-radius: 2px; font-weight: bold; }
+        .message .label { font-size: 11px; color: #aaaaaa; margin-bottom: 4px; }
+
+        .input-area { display: flex; gap: 10px; margin-bottom: 20px; }
+
+        .input-area input {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            background-color: #16213e;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-area input:focus { border-color: #00d4ff; }
+        .input-area input::placeholder { color: #666666; }
+
+        .input-area button {
+            padding: 14px 24px;
+            background-color: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .input-area button:hover { background-color: #00b8d9; }
+        .input-area button:disabled { background-color: #444444; cursor: not-allowed; }
+
+        .results-panel {
+            display: none;
+            background-color: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #0f3460;
+        }
+
+        .results-panel h2 { color: #00d4ff; font-size: 16px; margin-bottom: 15px; text-align: center; }
+
+        .overall-score {
+            text-align: center;
+            padding: 15px;
+            background-color: #0f3460;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .overall-score .label { font-size: 13px; color: #aaaaaa; }
+        .overall-score .value { font-size: 36px; font-weight: bold; color: #00d4ff; }
+        .overall-score .verdict { font-size: 16px; font-weight: bold; margin-top: 5px; }
+
+        .scores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+
+        .score-item { background-color: #0f3460; border-radius: 8px; padding: 12px; text-align: center; }
+        .score-item .area-name { font-size: 11px; color: #aaaaaa; margin-bottom: 6px; }
+        .score-item .score-value { font-size: 22px; font-weight: bold; }
+        .score-item .status { font-size: 11px; margin-top: 4px; }
+
+        .pass { color: #00ff88; }
+        .fail { color: #ff4444; }
+
+        .radar-container { width: 100%; max-width: 400px; margin: 0 auto 20px auto; }
+
+        .breakdown-panel {
+            background-color: #0f3460;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 15px;
+        }
+
+        .breakdown-panel h3 { color: #00d4ff; font-size: 14px; margin-bottom: 12px; }
+
+        .breakdown-area {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1a1a2e;
+        }
+
+        .breakdown-area:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+        .breakdown-area-heading {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .breakdown-area-heading.pass { color: #00ff88; }
+        .breakdown-area-heading.fail { color: #ff4444; }
+
+        .breakdown-area-body {
+            font-size: 13px;
+            line-height: 1.7;
+            color: #dddddd;
+        }
+
+        .breakdown-area-body a { color: #00d4ff; text-decoration: underline; }
+
+        .breakdown-intro {
+            font-size: 12px;
+            color: #aaaaaa;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #1a1a2e;
+            font-style: italic;
+        }
+
+        .unsure-panel {
+            background-color: #0f3460;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffaa00;
+        }
+
+        .unsure-panel h3 { color: #ffaa00; font-size: 14px; margin-bottom: 6px; }
+        .unsure-panel p { font-size: 12px; color: #aaaaaa; margin-bottom: 10px; }
+        .unsure-section-title { font-size: 12px; font-weight: bold; color: #ffffff; margin-bottom: 4px; margin-top: 8px; }
+        .unsure-item { font-size: 12px; color: #dddddd; padding-left: 12px; margin-bottom: 2px; }
+
+        .restart-btn {
+            display: none;
+            width: 100%;
+            padding: 12px;
+            background-color: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .restart-btn:hover { background-color: #00b8d9; }
+
+        .typing-indicator { display: none; align-items: center; gap: 5px; padding: 10px 0; }
+        .typing-indicator span { font-size: 13px; color: #aaaaaa; }
+
+        .dot {
+            width: 6px; height: 6px;
+            background-color: #00d4ff;
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); }
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+
+        .overlay.open { display: block; }
+    </style>
+</head>
+<body>
+    <div class="overlay" id="overlay" onclick="toggleHistory()"></div>
+
+    <div class="history-drawer" id="historyDrawer">
+        <h2>
+            Assessment History
+            <button onclick="toggleHistory()">x</button>
+        </h2>
+        <div id="historyList"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>CYBER ESSENTIALS READINESS CHATBOT</h1>
+            <p>Assess your organisation's readiness for UK Cyber Essentials certification</p>
+            <button class="history-btn" onclick="toggleHistory()">History</button>
+        </div>
+
+        <div class="chat-window" id="chatWindow">
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <span>Thinking...</span>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Type your message here..." />
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+
+        <div class="results-panel" id="resultsPanel">
+            <h2>ASSESSMENT RESULTS</h2>
+
+            <div class="overall-score">
+                <div class="label">Overall Readiness Score</div>
+                <div class="value" id="overallScore">-</div>
+                <div class="verdict" id="overallVerdict">-</div>
+            </div>
+
+            <div class="scores-grid" id="scoresGrid"></div>
+
+            <div class="radar-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+
+            <div class="breakdown-panel" id="breakdownPanel" style="display:none;">
+                <h3>Breakdown and Recommendations</h3>
+                <div id="breakdownContent"></div>
+            </div>
+
+            <div class="unsure-panel" id="unsurePanel" style="display:none;">
+                <h3>Areas to Investigate</h3>
+                <p>These are the questions you were unsure about. We recommend looking into these with your IT support or checking your settings directly.</p>
+                <div id="unsureList"></div>
+            </div>
+
+            <button class="restart-btn" id="restartBtn" onclick="restartAssessment()">
+                Start New Assessment
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let radarChart = null;
+        let assessmentHistory = JSON.parse(localStorage.getItem("assessmentHistory") || "[]");
+
+        window.onload = function() {
+            renderHistory();
+            startChat();
+        };
+
+        function toggleHistory() {
+            document.getElementById("historyDrawer").classList.toggle("open");
+            document.getElementById("overlay").classList.toggle("open");
+        }
+
+        function startChat() {
+            showTyping(true);
+            fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: "" })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showTyping(false);
+                renderMessagesWithDelay(data.messages);
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById("userInput");
+            const message = input.value.trim();
+            if (!message) return;
+
+            addMessage(message, "user");
+            input.value = "";
+
+            showTyping(true);
+            document.getElementById("sendBtn").disabled = true;
+
+            fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                showTyping(false);
+                document.getElementById("userInput").disabled = true;
+                renderMessagesWithDelay(data.messages, () => {
+                    document.getElementById("sendBtn").disabled = false;
+                    document.getElementById("userInput").disabled = false;
+                    if (data.is_complete && data.results) {
+                        showResults(data.results, data.breakdown, data.unsure_summary);
+                        saveToHistory(data.results, data.breakdown, data.unsure_summary);
+                    }
+});
+            });
+        }
+
+        function renderMessagesWithDelay(messages, callback) {
+            if (!messages || messages.length === 0) {
+                if (callback) callback();
+                return;
+            }
+
+            messages.forEach(msg => {
+                setTimeout(() => {
+                    if (msg.type === "bot") addMessage(msg.text, "bot");
+                    else if (msg.type === "tip") addTip(msg.text);
+                    else if (msg.type === "section") addSectionHeader(msg);
+                    else if (msg.type === "transition") addTransition(msg.text);
+                }, msg.delay || 0);
+            });
+
+            const lastDelay = Math.max(...messages.map(m => m.delay || 0));
+            setTimeout(() => { if (callback) callback(); }, lastDelay + 300);
+        }
+
+        function addSectionHeader(header) {
+            const chatWindow = document.getElementById("chatWindow");
+            const typingIndicator = document.getElementById("typingIndicator");
+            const div = document.createElement("div");
+            div.className = "section-header";
+            div.innerHTML = `
+                <div class="section-title">[Section ${header.number} of 5] ${header.title}</div>
+                <div class="section-description">${header.description}</div>
+            `;
+            chatWindow.insertBefore(div, typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function addTip(text) {
+            const chatWindow = document.getElementById("chatWindow");
+            const typingIndicator = document.getElementById("typingIndicator");
+            const div = document.createElement("div");
+            div.className = "tip-bubble";
+            div.textContent = text;
+            chatWindow.insertBefore(div, typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function addTransition(text) {
+            const chatWindow = document.getElementById("chatWindow");
+            const typingIndicator = document.getElementById("typingIndicator");
+            const div = document.createElement("div");
+            div.className = "transition-bubble";
+            div.textContent = text;
+            chatWindow.insertBefore(div, typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function addMessage(text, sender) {
+            const chatWindow = document.getElementById("chatWindow");
+            const typingIndicator = document.getElementById("typingIndicator");
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `message ${sender}`;
+            const label = document.createElement("div");
+            label.className = "label";
+            label.textContent = sender === "bot" ? "Chatbot" : "You";
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.textContent = text;
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(bubble);
+            chatWindow.insertBefore(messageDiv, typingIndicator);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function showTyping(show) {
+            const indicator = document.getElementById("typingIndicator");
+            indicator.style.display = show ? "flex" : "none";
+            if (show) document.getElementById("chatWindow").scrollTop = document.getElementById("chatWindow").scrollHeight;
+        }
+
+        function showResults(results, breakdown, unsureSummary) {
+            const panel = document.getElementById("resultsPanel");
+            panel.style.display = "block";
+
+            const overall = results.overall_percentage;
+            const passed = results.overall_passed;
+
+            document.getElementById("overallScore").textContent = overall + "%";
+            const verdictEl = document.getElementById("overallVerdict");
+            verdictEl.textContent = passed ? "Cyber Essentials Ready" : "Not Yet Ready";
+            verdictEl.className = "verdict " + (passed ? "pass" : "fail");
+
+            const grid = document.getElementById("scoresGrid");
+            grid.innerHTML = "";
+            const labels = [];
+            const scores = [];
+
+            for (const [area, data] of Object.entries(results.results)) {
+                labels.push(area);
+                scores.push(data.percentage);
+                const item = document.createElement("div");
+                item.className = "score-item";
+                item.innerHTML = `
+                    <div class="area-name">${area}</div>
+                    <div class="score-value ${data.passed ? 'pass' : 'fail'}">${data.percentage}%</div>
+                    <div class="status ${data.passed ? 'pass' : 'fail'}">${data.passed ? 'PASS' : 'FAIL'}</div>
+                `;
+                grid.appendChild(item);
+            }
+
+            drawRadarChart(labels, scores);
+
+            if (breakdown) {
+                document.getElementById("breakdownPanel").style.display = "block";
+                renderBreakdown(breakdown, results.results);
+            }
+
+            if (unsureSummary && Object.keys(unsureSummary).length > 0) {
+                document.getElementById("unsurePanel").style.display = "block";
+                const list = document.getElementById("unsureList");
+                list.innerHTML = "";
+                for (const [section, questions] of Object.entries(unsureSummary)) {
+                    const sectionDiv = document.createElement("div");
+                    sectionDiv.innerHTML = `<div class="unsure-section-title">${section}</div>`;
+                    questions.forEach(q => {
+                        const item = document.createElement("div");
+                        item.className = "unsure-item";
+                        item.textContent = "* " + q;
+                        sectionDiv.appendChild(item);
+                    });
+                    list.appendChild(sectionDiv);
+                }
+            }
+
+            document.getElementById("restartBtn").style.display = "block";
+            document.getElementById("sendBtn").disabled = true;
+            document.getElementById("userInput").disabled = true;
+            panel.scrollIntoView({ behavior: "smooth" });
+        }
+
+        function renderBreakdown(breakdown, areaResults) {
+            const container = document.getElementById("breakdownContent");
+            container.innerHTML = "";
+
+            // Split by the divider lines
+            const sections = breakdown.split("---").map(s => s.trim()).filter(s => s.length > 0);
+
+            // First section is the intro line
+            if (sections.length > 0) {
+                const intro = document.createElement("div");
+                intro.className = "breakdown-intro";
+                intro.textContent = sections[0].replace("The recommendations below are based on the official Cyber Essentials framework.", "").trim() ||
+                    "The recommendations below are based on the official Cyber Essentials framework.";
+                intro.textContent = "The recommendations below are based on the official Cyber Essentials framework.";
+                container.appendChild(intro);
+            }
+
+            // Remaining sections are the area breakdowns
+            for (let i = 1; i < sections.length; i++) {
+                const section = sections[i];
+                const lines = section.split("\n").filter(l => l.trim().length > 0);
+                if (lines.length === 0) continue;
+
+                const areaDiv = document.createElement("div");
+                areaDiv.className = "breakdown-area";
+
+                // First line is the heading
+                const heading = document.createElement("div");
+                heading.className = "breakdown-area-heading";
+                const headingText = lines[0].trim();
+               const isOverall = headingText.includes("Overall Score");
+                const isFail = headingText.includes("FAIL");
+               if (isOverall) {
+                heading.style.color = "#00d4ff";
+            } else if (isFail) {
+                heading.classList.add("fail");
+            } else {
+                heading.classList.add("pass");
+            }
+                
+                heading.textContent = headingText;
+                areaDiv.appendChild(heading);
+
+                // Rest is the body
+                const body = document.createElement("div");
+                body.className = "breakdown-area-body";
+
+                const bodyLines = lines.slice(1);
+                bodyLines.forEach(line => {
+                    const p = document.createElement("p");
+                    p.style.marginBottom = "6px";
+
+                    // Make links clickable
+                    if (line.includes("https://")) {
+                        const parts = line.split(/(https?:\/\/[^\s]+)/g);
+                        parts.forEach(part => {
+                            if (part.startsWith("http")) {
+                                const a = document.createElement("a");
+                                a.href = part;
+                                a.target = "_blank";
+                                a.textContent = part;
+                                p.appendChild(a);
+                            } else if (part.trim()) {
+                                p.appendChild(document.createTextNode(part));
+                            }
+                        });
+                    } else {
+                        p.textContent = line.trim();
+                    }
+                    body.appendChild(p);
+                });
+
+                areaDiv.appendChild(body);
+                container.appendChild(areaDiv);
+            }
+        }
+
+        function drawRadarChart(labels, scores) {
+            const ctx = document.getElementById("radarChart").getContext("2d");
+            if (radarChart) radarChart.destroy();
+            radarChart = new Chart(ctx, {
+                type: "radar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Readiness Score",
+                        data: scores,
+                        backgroundColor: "rgba(0, 212, 255, 0.2)",
+                        borderColor: "#00d4ff",
+                        pointBackgroundColor: "#00d4ff",
+                        pointBorderColor: "#ffffff",
+                        pointHoverBackgroundColor: "#ffffff",
+                        pointHoverBorderColor: "#00d4ff"
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0, max: 100,
+                            ticks: { stepSize: 25, color: "#ffffff", font: { size: 11 }, backdropColor: "rgba(15, 52, 96, 0.8)" },
+                            grid: { color: "#0f3460" },
+                            angleLines: { color: "#0f3460" },
+                            pointLabels: { color: "#ffffff", font: { size: 11 } }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function saveToHistory(results, breakdown, unsureSummary) {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString("en-GB", {
+                day: "2-digit", month: "short", year: "numeric",
+                hour: "2-digit", minute: "2-digit"
+            });
+
+            const entry = {
+                id: Date.now(),
+                date: dateStr,
+                overall_percentage: results.overall_percentage,
+                overall_passed: results.overall_passed,
+                results: results.results,
+                breakdown: breakdown,
+                unsure_summary: unsureSummary,
+                favourited: false
+            };
+
+            const favourited = assessmentHistory.filter(e => e.favourited);
+            let normal = assessmentHistory.filter(e => !e.favourited);
+            normal.unshift(entry);
+            if (normal.length > 5) normal = normal.slice(0, 5);
+            assessmentHistory = [...favourited, ...normal];
+
+            localStorage.setItem("assessmentHistory", JSON.stringify(assessmentHistory));
+            renderHistory();
+        }
+
+        function toggleFavourite(id) {
+            assessmentHistory = assessmentHistory.map(e => {
+                if (e.id === id) e.favourited = !e.favourited;
+                return e;
+            });
+            localStorage.setItem("assessmentHistory", JSON.stringify(assessmentHistory));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById("historyList");
+            list.innerHTML = "";
+
+            const favourited = assessmentHistory.filter(e => e.favourited);
+            const normal = assessmentHistory.filter(e => !e.favourited);
+
+            if (assessmentHistory.length === 0) {
+                list.innerHTML = '<div class="history-empty">No assessments yet.</div>';
+                return;
+            }
+
+            if (favourited.length > 0) {
+                const favLabel = document.createElement("div");
+                favLabel.className = "history-section-label";
+                favLabel.textContent = "Favourites";
+                list.appendChild(favLabel);
+                favourited.forEach(entry => list.appendChild(buildHistoryEntry(entry)));
+            }
+
+            if (normal.length > 0) {
+                const recLabel = document.createElement("div");
+                recLabel.className = "history-section-label";
+                recLabel.textContent = "Recent";
+                list.appendChild(recLabel);
+                normal.forEach(entry => list.appendChild(buildHistoryEntry(entry)));
+            }
+        }
+
+        function buildHistoryEntry(entry) {
+            const div = document.createElement("div");
+            div.className = "history-entry" + (entry.favourited ? " favourited" : "");
+            div.id = `history-entry-${entry.id}`;
+
+            let areasHtml = "";
+            for (const [area, data] of Object.entries(entry.results)) {
+                areasHtml += `
+                    <div class="history-area">
+                        <span>${area}</span>
+                        <span class="${data.passed ? 'pass' : 'fail'}">${data.percentage}% ${data.passed ? 'PASS' : 'FAIL'}</span>
+                    </div>
+                `;
+            }
+
+            let unsureHtml = "";
+            if (entry.unsure_summary && Object.keys(entry.unsure_summary).length > 0) {
+                unsureHtml = `<div style="margin-top:8px; font-size:11px; color:#ffaa00;">Areas to Investigate:</div>`;
+                for (const [section, questions] of Object.entries(entry.unsure_summary)) {
+                    unsureHtml += `<div style="font-size:11px; color:#aaaaaa; margin-top:4px;">${section}</div>`;
+                    questions.forEach(q => {
+                        unsureHtml += `<div style="font-size:11px; color:#dddddd; padding-left:10px;">* ${q}</div>`;
+                    });
+                }
+            }
+
+            div.innerHTML = `
+                <div class="history-entry-header">
+                    <div class="history-date">${entry.date}</div>
+                    <div class="history-score">${entry.overall_percentage}%</div>
+                </div>
+                <div class="history-verdict ${entry.overall_passed ? 'pass' : 'fail'}">
+                    ${entry.overall_passed ? 'Cyber Essentials Ready' : 'Not Yet Ready'}
+                </div>
+                <div class="history-actions">
+                    <button class="history-expand-btn" onclick="toggleDetails(${entry.id})">View Details</button>
+                    <button class="history-fav-btn ${entry.favourited ? 'active' : ''}" onclick="toggleFavourite(${entry.id})">★</button>
+                    <button class="history-delete-btn" onclick="deleteEntry(${entry.id})">Delete</button>
+                </div>
+                <div class="history-details" id="details-${entry.id}">
+                    ${areasHtml}
+                    <div class="history-breakdown">${entry.breakdown || ""}</div>
+                    ${unsureHtml}
+                </div>
+            `;
+
+            return div;
+        }
+
+        function toggleDetails(id) {
+            const details = document.getElementById(`details-${id}`);
+            const btn = details.previousElementSibling.querySelector(".history-expand-btn");
+            if (details.style.display === "block") {
+                details.style.display = "none";
+                btn.textContent = "View Details";
+            } else {
+                details.style.display = "block";
+                btn.textContent = "Hide Details";
+            }
+        }
+
+        function deleteEntry(id) {
+            assessmentHistory = assessmentHistory.filter(e => e.id !== id);
+            localStorage.setItem("assessmentHistory", JSON.stringify(assessmentHistory));
+            renderHistory();
+        }
+
+        function restartAssessment() {
+            document.getElementById("resultsPanel").style.display = "none";
+            document.getElementById("scoresGrid").innerHTML = "";
+            document.getElementById("breakdownPanel").style.display = "none";
+            document.getElementById("breakdownContent").innerHTML = "";
+            document.getElementById("unsurePanel").style.display = "none";
+            document.getElementById("restartBtn").style.display = "none";
+            document.getElementById("sendBtn").disabled = false;
+            document.getElementById("userInput").disabled = false;
+
+            if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+            document.getElementById("chatWindow").innerHTML = `
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <span>Thinking...</span>
+                </div>
+            `;
+
+            fetch("/restart", { method: "POST" })
+            .then(res => res.json())
+            .then(() => startChat());
+        }
+
+        document.getElementById("userInput").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+</body>
+</html>
