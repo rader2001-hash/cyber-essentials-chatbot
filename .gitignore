@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 comparison.py
 API_KEYS.txt
+screenshots/
