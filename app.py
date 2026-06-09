@@ -45,7 +45,7 @@ Follow these rules strictly:
 
 # Initialise Flask app
 app = Flask(__name__)
-app.secret_key = "cyber_essentials_secret_key"
+app.secret_key = os.getenv("SECRET_KEY", "cyber_essentials_secret_key")
 
 
 
