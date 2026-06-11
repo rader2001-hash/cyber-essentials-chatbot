@@ -478,27 +478,16 @@ def chat():
     unsure_summary = None
 
     if stage == "intro":
-        messages.append({"role": "user", "content": "Please introduce yourself briefly and ask me about the size of my organisation and what kind of business I run."})
-        response = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages)
-        intro_text = response.choices[0].message.content
+        intro_text = "Hello! I am your Cyber Essentials Readiness Assessment Assistant. I will guide you through a series of questions to help you understand how ready your organisation is for UK Cyber Essentials certification. Please note this assessment may take 3 to 5 minutes to complete."
         messages.append({"role": "assistant", "content": intro_text})
         response_messages.append({"type": "bot", "text": intro_text, "delay": 0})
-        session["stage"] = "context"
-
-    elif stage == "context":
-        messages.append({"role": "user", "content": user_message})
-        ack_text = "Thank you for sharing that. The assessment is about to begin. Please note this assessment may take 3 to 5 minutes to complete."
-        tip_text = "For each question please answer yes, no, or unsure. Any other input will be asked to clarify."
-        messages.append({"role": "assistant", "content": ack_text})
-
-        response_messages.append({"type": "bot", "text": ack_text, "delay": 0})
-        response_messages.append({"type": "tip", "text": tip_text, "delay": 800})
+        response_messages.append({"type": "tip", "text": "For each question please answer yes, no, or unsure. Any other input will be asked to clarify.", "delay": 800})
         response_messages.append({"type": "section", "title": all_questions[0][1], "number": 1, "description": all_questions[0][2], "delay": 1600})
         response_messages.append({"type": "bot", "text": all_questions[0][3], "delay": 2400})
-
         session["stage"] = "questions"
         session["current_section"] = all_questions[0][1]
 
+    
     elif stage == "questions":
         user_input = user_message.strip().lower()
 
